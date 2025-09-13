@@ -1,5 +1,17 @@
 "use client";
 
+// export default function RootLayout({ children }) {
+//   return (
+//     <html lang="en">
+//       <head>
+//         <meta name="api-base" content="https://api.yourdomain.com" />
+//       </head>
+//       <body className="min-h-screen bg-black text-white">{children}</body>
+//     </html>
+//   );
+// }
+
+
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
 
 const Card = ({ className = "", children }) => (
@@ -354,7 +366,7 @@ export default function NeuralNetStudio() {
           <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Icon.Brain className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Neural Net Studio</h1>
-            <p className="text-sm text-slate-400">Train, stream metrics, and test your CNN models</p>
+            <p className="text-sm text-slate-400">Train, stream metrics, and test your Java NNFS models</p>
           </div>
         </div>
         <Badge className="bg-slate-800 border border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
@@ -517,6 +529,63 @@ export default function NeuralNetStudio() {
         </Tabs>
 
         <footer className="mt-10 text-center text-slate-500 text-xs">Frontend calls a separate API domain. Dev: Next.js :3000, Spring Boot :8080. Metrics stream via <b>SSE</b> (fallback <b>WebSocket</b>) with auto‑reconnect.</footer>
+        <style jsx global>{`
+        :root{
+          --bg-0:#0b1220;--bg-1:#0f172a;--bg-2:#0b1324;--card:#0f172a;--muted:#94a3b8;--text:#e5e7eb;--accent:#38bdf8;--border:#1f2937;
+          --radius:16px;--shadow:0 10px 25px rgba(0,0,0,.35);
+        }
+        html,body{background:linear-gradient(180deg,var(--bg-0),var(--bg-1));color:var(--text);font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
+        h1{font-size:28px;margin:0}
+        h2{font-size:18px;margin:0}
+        header{align-items:center}
+        .rounded-2xl{border-radius:var(--radius)}
+        .border{border:1px solid var(--border)}
+        .bg-slate-900\/60{background:rgba(15,23,42,.6)}
+        .bg-slate-800{background:#1f2937}
+        .bg-slate-950{background:#0b1220}
+        .text-slate-100{color:#f1f5f9}
+        .text-slate-400{color:#94a3b8}
+        .text-slate-500{color:#94a3b8}
+        .p-6{padding:24px}
+        .p-3{padding:12px}
+        .px-3{padding-left:12px;padding-right:12px}
+        .py-2{padding-top:8px;padding-bottom:8px}
+        .gap-2{gap:8px}
+        .gap-3{gap:12px}
+        .gap-1{gap:4px}
+        .grid{display:grid}
+        .inline-grid{display:inline-grid}
+        .grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+        .md\:grid-cols-2{grid-template-columns:1fr}
+        @media(min-width:768px){.md\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .space-y-5>*+*{margin-top:20px}
+        .space-y-4>*+*{margin-top:16px}
+        .w-full{width:100%}
+        .h-64{height:16rem}
+        .min-h-40{min-height:10rem}
+        .min-h-screen{min-height:100vh}
+        .mx-auto{margin-left:auto;margin-right:auto}
+        .px-4{padding-left:16px;padding-right:16px}
+        .py-10{padding-top:40px;padding-bottom:40px}
+        .rounded-xl{border-radius:12px}
+        .rounded{border-radius:8px}
+        .border-slate-800{border-color:#1f2937}
+        .border-slate-700{border-color:#334155}
+        .shadow{box-shadow:var(--shadow)}
+        .backdrop-blur{backdrop-filter:saturate(140%) blur(8px)}
+        button{cursor:pointer}
+        button.bg-white{background:#e2e8f0;color:#0b1220}
+        button.bg-white:hover{filter:brightness(1.05)}
+        button.bg-slate-800{background:#1f2937}
+        button.bg-slate-800:hover{filter:brightness(1.1)}
+        input[type="file"],input[type="text"],input[type="range"],select,textarea{
+          color:var(--text);background:var(--bg-2);border:1px solid var(--border);
+          border-radius:12px;padding:8px 12px;outline:none
+        }
+        input[type="range"]{padding:0;height:6px}
+        code{background:rgba(148,163,184,.1);padding:2px 6px;border-radius:8px}
+        canvas{background:#fff;border-radius:12px}
+      `}</style>
       </main>
     </div>
   );
