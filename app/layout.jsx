@@ -1,14 +1,16 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Neural Net Studio",
-  description: "Train, stream metrics, and test your CNN models",
+  title: "Neural Networks Frontend",
+  description: "Interactive neural net visualizer with SSE + charts",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen bg-gray-950 text-gray-100 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
