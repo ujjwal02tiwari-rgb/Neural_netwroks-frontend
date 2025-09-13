@@ -1,10 +1,14 @@
+import "./globals.css";
+
+export const metadata = {
+  title: "Neural Net Studio",
+  description: "Train, stream metrics, and test your CNN models",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <head>
-        <meta name="api-base" content="https://api.yourdomain.com" />
-      </head>
-      <body className="min-h-screen bg-black text-white">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
