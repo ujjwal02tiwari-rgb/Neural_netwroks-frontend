@@ -1,9 +1,7 @@
 "use client";
 
-
-
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
-// Local lightweight UI primitives to avoid '@/components/ui/*' module errors and external icon packages
+
 const Card: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className = "", children }) => (
   <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}>{children}</div>
 );
@@ -28,19 +26,41 @@ const Badge: React.FC<React.PropsWithChildren<{ className?: string; variant?: "s
 const Progress: React.FC<{ value: number; className?: string }> = ({ value, className="" }) => (
   <div className={`w-full h-2 bg-slate-800 rounded ${className}`}><div style={{ width: `${Math.max(0, Math.min(100, value))}%` }} className="h-full bg-white rounded"></div></div>
 );
+
 // Tabs
 const TabsCtx = createContext<{ value: string; set: (v: string)=>void }|null>(null);
 const Tabs: React.FC<React.PropsWithChildren<{ defaultValue: string; className?: string }>> = ({ defaultValue, className="", children }) => { const [v, setV] = useState(defaultValue); return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>; };
 const TabsList: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className="", children }) => <div className={`inline-grid gap-2 ${className}`}>{children}</div>;
 const TabsTrigger: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => { const ctx = useContext(TabsCtx)!; const active = ctx.value === value; return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"}>{children}</Button>; };
 const TabsContent: React.FC<React.PropsWithChildren<{ value: string; className?: string }>> = ({ value, className="", children }) => { const ctx = useContext(TabsCtx)!; return ctx.value === value ? <div className={className}>{children}</div> : null };
-// Select mapped to native select
-const SelectCtx = createContext<{ value: string; onChange: (v: string)=>void }|null>(null);
-const Select: React.FC<React.PropsWithChildren<{ value: string; onValueChange: (v:string)=>void }>> = ({ value, onValueChange, children }) => (<SelectCtx.Provider value={{ value, onChange: onValueChange }}>{children}</SelectCtx.Provider>);
-const SelectTrigger: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className="" }) => { const ctx = useContext(SelectCtx)!; return (<select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}></select>); };
-const SelectContent: React.FC<React.PropsWithChildren> = ({ children }) => <>{children}</>;
-const SelectItem: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => <option value={value}>{children}</option>;
-// Icons (inline SVG)
+
+// Select mapped to native select (supports <SelectTrigger/><SelectContent><SelectItem/></...>)
+const SelectCtx = createContext<{ value: string; onChange: (v: string)=>void; optionsRef: React.MutableRefObject<{value:string; label:React.ReactNode}[]> }|null>(null);
+const Select: React.FC<React.PropsWithChildren<{ value: string; onValueChange: (v:string)=>void }>> = ({ value, onValueChange, children }) => {
+  const optionsRef = useRef<{value:string; label:React.ReactNode}[]>([]);
+  // Clear options before each render so children can register again
+  optionsRef.current = [];
+  return <SelectCtx.Provider value={{ value, onChange: onValueChange, optionsRef }}>{children}</SelectCtx.Provider>;
+};
+const SelectTrigger: React.FC<{ className?: string }> = ({ className="" }) => {
+  const ctx = useContext(SelectCtx)!;
+  return (
+    <select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}>
+      {ctx.optionsRef.current.map(opt => <option key={opt.value} value={opt.value}>{opt.label as any}</option>)}
+    </select>
+  );
+};
+const SelectContent: React.FC<React.PropsWithChildren> = ({ children }) => (<>{children}</>);
+const SelectItem: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => {
+  const ctx = useContext(SelectCtx)!;
+  // Register option
+  useEffect(()=>{
+    ctx.optionsRef.current.push({ value, label: children });
+  }, [value, children]);
+  return null; // not rendered; options appear in SelectTrigger
+};
+
+// Inline icons (SVG)
 const Icon = {
   Brain: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M7 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M4 10v4a4 4 0 0 0 4 4h1v-8H7a3 3 0 0 0-3 3Zm16 0v4a4 4 0 0 1-4 4h-1v-8h2a3 3 0 0 1 3 3Z"/></svg>),
   Upload: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 15V5"/></svg>),
@@ -51,9 +71,43 @@ const Icon = {
   Beaker: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M6 2h12"/><path d="M14 2v6l5 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l5-9V2"/></svg>),
 };
 
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+// =====================
+// Inline SVG Chart (no deps)
+// =====================
+type SeriesPoint = { step: number; loss: number; acc: number };
+const SimpleChart: React.FC<{ data: SeriesPoint[] }> = ({ data }) => {
+  const W = 800, H = 240, P = 30;
+  if (!data || data.length === 0) return <div className="h-64" />;
+  const xs = data.map(d => d.step);
+  const ysLoss = data.map(d => d.loss);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = Math.min(...ysLoss), yMax = Math.max(...ysLoss);
+  const x = (v:number)=> P + ((v - xMin) / (xMax - xMin || 1)) * (W - 2*P);
+  const yLoss = (v:number)=> H - P - ((v - yMin) / (yMax - yMin || 1)) * (H - 2*P);
+  const yAcc = (v:number)=> H - P - (Math.max(0, Math.min(1, v)) * (H - 2*P));
+  const toPath = (pts:{x:number,y:number}[]) => pts.map((p,i)=>`${i?"L":"M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const lossPath = toPath(data.map(d=>({ x: x(d.step), y: yLoss(d.loss) })));
+  const accPath  = toPath(data.map(d=>({ x: x(d.step), y: yAcc(d.acc ?? 0) })));
+  return (
+    <div className="h-64">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+        <rect x={0} y={0} width={W} height={H} fill="none" />
+        {/* axes */}
+        <line x1={P} y1={H-P} x2={W-P} y2={H-P} stroke="currentColor" opacity="0.3"/>
+        <line x1={P} y1={P} x2={P} y2={H-P} stroke="currentColor" opacity="0.3"/>
+        {/* series */}
+        <path d={lossPath} fill="none" stroke="currentColor" strokeWidth={2} />
+        <path d={accPath}  fill="none" stroke="currentColor" strokeWidth={2} opacity={0.7} />
+        <text x={P} y={P-8} fontSize={10} fill="currentColor" opacity={0.6}>loss</text>
+        <text x={W-P-20} y={P-8} fontSize={10} fill="currentColor" opacity={0.6}>acc</text>
+      </svg>
+    </div>
+  );
+};
 
-
+// =====================
+// Helpers & Config
+// =====================
 function resolveApiBase(): string {
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     const meta = document.querySelector('meta[name="api-base"]') as HTMLMetaElement | null;
@@ -63,18 +117,16 @@ function resolveApiBase(): string {
     const { protocol, hostname, port } = window.location;
     if (port === "3000") return `${protocol}//${hostname}:8080`;
   }
- 
+  // Explicit separate-domain default
   return "https://api.yourdomain.com";
 }
 
-// Demo chart data seed
-const demoSeries = Array.from({ length: 5 }, (_, i) => ({
+const demoSeries: SeriesPoint[] = Array.from({ length: 5 }, (_, i) => ({
   step: i + 1,
   loss: 1 / (i + 1) + Math.random() * 0.05,
   acc: Math.min(0.1 + i * 0.1, 0.99),
 }));
 
-// Safely extract a prediction label from arbitrary API payloads
 function extractPrediction(data: any): string {
   try {
     if (data && typeof data === "object" && "label" in data) return String((data as any).label);
@@ -85,6 +137,9 @@ function extractPrediction(data: any): string {
   }
 }
 
+// =====================
+// Main Component
+// =====================
 export default function NeuralNetStudio() {
   const apiBase = useMemo(resolveApiBase, []);
 
@@ -94,7 +149,7 @@ export default function NeuralNetStudio() {
   const [lr, setLr] = useState(0.01);
   const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
-  const [series, setSeries] = useState(demoSeries);
+  const [series, setSeries] = useState<SeriesPoint[]>(demoSeries);
   const [file, setFile] = useState<File | undefined>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [prediction, setPrediction] = useState<string>("—");
@@ -109,7 +164,7 @@ export default function NeuralNetStudio() {
   const retryRef = useRef<number>(0);
   const reconnectTimerRef = useRef<number | null>(null);
 
-  // --- Smoke tests (kept) + added URL builders & parsing tests ---
+  // --- Smoke tests (existing + added) ---
   type T = { name: string; run: () => Promise<string> };
   const [testOutput, setTestOutput] = useState<string>("");
   const tests: T[] = useMemo(() => [
@@ -135,25 +190,13 @@ export default function NeuralNetStudio() {
       },
     },
     { name: "Build SSE URL", run: async () => `${apiBase}${ssePath}` },
-    {
-      name: "Build WebSocket URL",
-      run: async () => apiBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:") + wsPath,
-    },
-    {
-      name: "Parse sample predict payload (with label)",
-      run: async () => `extractPrediction => ${extractPrediction({ label: 7, score: 0.98 })}`,
-    },
-    {
-      name: "Parse sample predict payload (no label)",
-      run: async () => `extractPrediction => ${extractPrediction({ value: 3, confidence: 0.77 })}`,
-    },
-    {
-      name: "Preview backoff (1,2,4,8s)",
-      run: async () => [0,1,2,3].map(n => 1000 * 2**n).join(", "),
-    },
+    { name: "Build WebSocket URL", run: async () => apiBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:") + wsPath },
+    { name: "Parse sample predict payload (with label)", run: async () => `extractPrediction => ${extractPrediction({ label: 7, score: 0.98 })}` },
+    { name: "Parse sample predict payload (no label)", run: async () => `extractPrediction => ${extractPrediction({ value: 3, confidence: 0.77 })}` },
+    { name: "Preview backoff (1,2,4,8s)", run: async () => [0,1,2,3].map(n => 1000 * 2**n).join(", ") },
   ], [apiBase, ssePath, wsPath]);
 
-  
+  // Draw pad helpers
   useEffect(() => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
@@ -191,20 +234,18 @@ export default function NeuralNetStudio() {
     return r.json();
   };
 
-
+  // Auto-reconnect helpers
   const clearReconnectTimer = () => {
     if (reconnectTimerRef.current != null) {
       window.clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
     }
   };
-
   const computeDelay = (attempt: number) => {
     const base = 1000 * Math.pow(2, attempt); // 1s,2s,4s,...
     const jitter = Math.floor(Math.random() * 250); // up to +250ms
     return Math.min(base + jitter, 10000); // cap at 10s
   };
-
   const scheduleReconnect = (kind: "sse" | "ws") => {
     if (!autoReconnect) return;
     const attempt = retryRef.current;
@@ -217,7 +258,7 @@ export default function NeuralNetStudio() {
     retryRef.current = Math.min(attempt + 1, 20);
   };
 
-  
+  // Streaming subscribe functions
   const closeStream = () => {
     clearReconnectTimer();
     if (streamRef.current instanceof EventSource) streamRef.current.close();
@@ -281,20 +322,14 @@ export default function NeuralNetStudio() {
         const up = await fetch(`${apiBase}/dataset/upload`, { method: "POST", body: fd });
         if (!up.ok) throw new Error(await up.text());
       }
-
-      // Kick off training on server; prefer /train/start, fallback to /train
-      try {
-        await postJSON("/train/start", { model, batch, epochs, lr });
-      } catch {
+      try { await postJSON("/train/start", { model, batch, epochs, lr }); }
+      catch {
         const r = await fetch(`${apiBase}/train`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, batch, epochs, lr }) });
         if (!r.ok) throw new Error(await r.text());
       }
-
-      // Connect streaming: try SSE first, then WS fallback
       try { subscribeSSE(); } catch { subscribeWS(); }
-    } catch (err: any) {
-      setStatus(`Error: ${err.message}`);
-    } finally { setBusy(false); }
+    } catch (err: any) { setStatus(`Error: ${err.message}`); }
+    finally { setBusy(false); }
   };
 
   const predictCanvas = async () => {
@@ -330,7 +365,7 @@ export default function NeuralNetStudio() {
           <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Icon.Brain className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Neural Net Studio</h1>
-            <p className="text-sm text-slate-400">Train, stream metrics, and test your Convulational Neural Networks models</p>
+            <p className="text-sm text-slate-400">Train, stream metrics, and test your Neural Networks models</p>
           </div>
         </div>
         <Badge variant="secondary" className="bg-slate-800 border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
@@ -411,19 +446,7 @@ export default function NeuralNetStudio() {
               <Card>
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2"><Icon.Beaker className="w-5 h-5" /><h2 className="text-lg font-semibold">Training metrics (live)</h2></div>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={series} margin={{ top: 10, right: 20, bottom: 0, left: -20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="step" tick={{ fontSize: 12 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-                        <Tooltip />
-                        <Line yAxisId="left" type="monotone" dataKey="loss" dot={false} />
-                        <Line yAxisId="right" type="monotone" dataKey="acc" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <SimpleChart data={series} />
                 </CardContent>
               </Card>
             </div>
