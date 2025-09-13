@@ -1,78 +1,63 @@
 "use client";
 
-// export default function RootLayout({ children }) {
-//   return (
-//     <html lang="en">
-//       <head>
-//         <meta name="api-base" content="https://api.yourdomain.com" />
-//       </head>
-//       <body className="min-h-screen bg-black text-white">{children}</body>
-//     </html>
-//   );
-// }
-
-
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
 
+function useMotion() {
+  const [motion, setMotion] = useState(undefined);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const mod = await import("framer-motion");
+        if (mounted) setMotion(mod.motion);
+      } catch (_) {
+        if (mounted) setMotion(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  return motion;
+}
+
+
 const Card = ({ className = "", children }) => (
-  <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}>{children}</div>
+  <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 shadow-lg shadow-slate-900/40 ${className}`}>{children}</div>
 );
 const CardContent = ({ className = "", children }) => <div className={className}>{children}</div>;
 const Button = ({ className = "", variant, children, ...rest }) => (
-  <button className={`${variant === "secondary" ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"} rounded-xl px-3 py-2 border border-slate-700 hover:opacity-90 transition ${className}`} {...rest}>{children}</button>
+  <button className={`${variant === "secondary" ? "bg-slate-800 text-slate-100" : "bg-cyan-500/90 text-slate-900"} rounded-xl px-4 py-2 border border-slate-700 hover:brightness-110 transition ${className}`} {...rest}>{children}</button>
 );
 const Input = ({ className = "", ...rest }) => (
-  <input className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 ${className}`} {...rest} />
+  <input className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${className}`} {...rest} />
 );
 const Textarea = ({ className = "", ...rest }) => (
-  <textarea className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} {...rest} />
+  <textarea className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 text-slate-100 w-full focus:outline-none focus:ring-2 focus:ring-cyan-500/50 ${className}`} {...rest} />
 );
 const Slider = ({ value, min, max, step = 1, onValueChange, className = "" }) => (
-  <input type="range" min={min} max={max} step={step} value={value[0]} onChange={(e)=>onValueChange([Number(e.target.value)])} className={`w-full ${className}`} />
+  <input type="range" min={min} max={max} step={step} value={value[0]} onChange={(e)=>onValueChange([Number(e.target.value)])} className={`w-full h-2 accent-cyan-400 bg-slate-800 rounded-lg ${className}`} />
 );
 const Badge = ({ className = "", children }) => (
-  <span className={`inline-flex items-center text-xs px-2 py-1 rounded-lg ${className}`}>{children}</span>
+  <span className={`inline-flex items-center text-[10px] uppercase tracking-wide font-semibold px-2 py-1 rounded-lg bg-slate-800/90 border border-slate-700 ${className}`}>{children}</span>
 );
 const Progress = ({ value, className="" }) => (
-  <div className={`w-full h-2 bg-slate-800 rounded ${className}`}><div style={{ width: `${Math.max(0, Math.min(100, value))}%` }} className="h-full bg-white rounded"></div></div>
+  <div className={`w-full h-2 bg-slate-800 rounded ${className}`}><div style={{ width: `${Math.max(0, Math.min(100, value))}%` }} className="h-full bg-cyan-400 rounded"></div></div>
 );
 
-// Tabs
+
 const TabsCtx = createContext(null);
-const Tabs = ({ defaultValue, className="", children }) => {
-  const [v, setV] = useState(defaultValue);
-  return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>;
-};
+const Tabs = ({ defaultValue, className="", children }) => { const [v, setV] = useState(defaultValue); return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>; };
 const TabsList = ({ className="", children }) => <div className={`inline-grid gap-2 ${className}`}>{children}</div>;
-const TabsTrigger = ({ value, children }) => {
-  const ctx = useContext(TabsCtx); const active = ctx.value === value;
-  return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"}>{children}</Button>;
-};
+const TabsTrigger = ({ value, children }) => { const ctx = useContext(TabsCtx); const active = ctx.value === value; return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"} className={`${active?"": "opacity-80"}`}>{children}</Button>; };
 const TabsContent = ({ value, className="", children }) => { const ctx = useContext(TabsCtx); return ctx.value === value ? <div className={className}>{children}</div> : null };
 
 // Select mapped to native select
 const SelectCtx = createContext(null);
-const Select = ({ value, onValueChange, children }) => {
-  const optionsRef = useRef([]);
-  optionsRef.current = [];
-  return <SelectCtx.Provider value={{ value, onChange: onValueChange, optionsRef }}>{children}</SelectCtx.Provider>;
-};
-const SelectTrigger = ({ className="" }) => {
-  const ctx = useContext(SelectCtx);
-  return (
-    <select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}>
-      {ctx.optionsRef.current.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-    </select>
-  );
-};
+const Select = ({ value, onValueChange, children }) => { const optionsRef = useRef([]); optionsRef.current = []; return <SelectCtx.Provider value={{ value, onChange: onValueChange, optionsRef }}>{children}</SelectCtx.Provider>; };
+const SelectTrigger = ({ className="" }) => { const ctx = useContext(SelectCtx); return (<select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 text-slate-100 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}>{ctx.optionsRef.current.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>); };
 const SelectContent = ({ children }) => (<>{children}</>);
-const SelectItem = ({ value, children }) => {
-  const ctx = useContext(SelectCtx);
-  useEffect(()=>{ ctx.optionsRef.current.push({ value, label: children }); }, [value, children]);
-  return null;
-};
+const SelectItem = ({ value, children }) => { const ctx = useContext(SelectCtx); useEffect(()=>{ ctx.optionsRef.current.push({ value, label: children }); }, [value, children]); return null; };
 
-// Inline icons (SVG)
+
 const Icon = {
   Brain: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M7 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M4 10v4a4 4 0 0 0 4 4h1v-8H7a3 3 0 0 0-3 3Zm16 0v4a4 4 0 0 1-4 4h-1v-8h2a3 3 0 0 1 3 3Z"/></svg>),
   Upload: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 15V5"/></svg>),
@@ -81,11 +66,10 @@ const Icon = {
   Check: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M20 6L9 17l-5-5"/></svg>),
   Link: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"/></svg>),
   Beaker: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M6 2h12"/><path d="M14 2v6l5 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l5-9V2"/></svg>),
+  Sun: (p)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.536 6.364-1.414-1.414M6.879 6.879 5.464 5.464m12.728 0-1.415 1.415M6.879 17.121l-1.415 1.415"/></svg>),
+  Moon: (p)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>),
 };
 
-// =====================
-// Inline SVG Chart (no deps)
-// =====================
 const SimpleChart = ({ data }) => {
   const W = 800, H = 240, P = 30;
   if (!data || data.length === 0) return <div className="h-64" />;
@@ -116,9 +100,7 @@ const SimpleChart = ({ data }) => {
   );
 };
 
-// =====================
-// Helpers & Config
-// =====================
+
 function resolveApiBase() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     const meta = document.querySelector('meta[name="api-base"]');
@@ -366,7 +348,7 @@ export default function NeuralNetStudio() {
           <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Icon.Brain className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Neural Net Studio</h1>
-            <p className="text-sm text-slate-400">Train, stream metrics, and test your Java NNFS models</p>
+            <p className="text-sm text-slate-400">Train, stream metrics, and test your CNN models</p>
           </div>
         </div>
         <Badge className="bg-slate-800 border border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
