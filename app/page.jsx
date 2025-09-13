@@ -580,9 +580,5 @@ return (
     <footer className="mt-10 text-center text-slate-500 text-xs">Separate API domain. Dev: Next.js :3000, Spring Boot :8080. Metrics via <b>SSE</b> (fallback <b>WebSocket</b>) with auto‑reconnect. Live activations & layer activity via SSE.</footer>
   </main>
 </div>
-
-
- );
-}
-
-
+  },
+  }
