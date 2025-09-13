@@ -1,27 +1,59 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-// IMPORTANT: Use the correct lucide icon name. It's `Link`, not `LinkIcon`.
-import { Beaker, Brain, Check, Loader2, Play, Upload, Link as LinkIcon } from "lucide-react";
+
+
+import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
+// Local lightweight UI primitives to avoid '@/components/ui/*' module errors and external icon packages
+const Card: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className = "", children }) => (
+  <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}>{children}</div>
+);
+const CardContent: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className = "", children }) => (
+  <div className={className}>{children}</div>
+);
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "secondary" } > = ({ className = "", variant, children, ...rest }) => (
+  <button className={`${variant === "secondary" ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"} rounded-xl px-3 py-2 border border-slate-700 hover:opacity-90 transition ${className}`} {...rest}>{children}</button>
+);
+const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ className = "", ...rest }) => (
+  <input className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 ${className}`} {...rest} />
+);
+const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = ({ className = "", ...rest }) => (
+  <textarea className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} {...rest} />
+);
+const Slider: React.FC<{ value: number[]; min: number; max: number; step?: number; onValueChange: (v: number[]) => void; className?: string; }> = ({ value, min, max, step = 1, onValueChange, className = "" }) => (
+  <input type="range" min={min} max={max} step={step} value={value[0]} onChange={(e)=>onValueChange([Number(e.target.value)])} className={`w-full ${className}`} />
+);
+const Badge: React.FC<React.PropsWithChildren<{ className?: string; variant?: "secondary" }>> = ({ className = "", children }) => (
+  <span className={`inline-flex items-center text-xs px-2 py-1 rounded-lg ${className}`}>{children}</span>
+);
+const Progress: React.FC<{ value: number; className?: string }> = ({ value, className="" }) => (
+  <div className={`w-full h-2 bg-slate-800 rounded ${className}`}><div style={{ width: `${Math.max(0, Math.min(100, value))}%` }} className="h-full bg-white rounded"></div></div>
+);
+// Tabs
+const TabsCtx = createContext<{ value: string; set: (v: string)=>void }|null>(null);
+const Tabs: React.FC<React.PropsWithChildren<{ defaultValue: string; className?: string }>> = ({ defaultValue, className="", children }) => { const [v, setV] = useState(defaultValue); return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>; };
+const TabsList: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className="", children }) => <div className={`inline-grid gap-2 ${className}`}>{children}</div>;
+const TabsTrigger: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => { const ctx = useContext(TabsCtx)!; const active = ctx.value === value; return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"}>{children}</Button>; };
+const TabsContent: React.FC<React.PropsWithChildren<{ value: string; className?: string }>> = ({ value, className="", children }) => { const ctx = useContext(TabsCtx)!; return ctx.value === value ? <div className={className}>{children}</div> : null };
+// Select mapped to native select
+const SelectCtx = createContext<{ value: string; onChange: (v: string)=>void }|null>(null);
+const Select: React.FC<React.PropsWithChildren<{ value: string; onValueChange: (v:string)=>void }>> = ({ value, onValueChange, children }) => (<SelectCtx.Provider value={{ value, onChange: onValueChange }}>{children}</SelectCtx.Provider>);
+const SelectTrigger: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className="" }) => { const ctx = useContext(SelectCtx)!; return (<select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}></select>); };
+const SelectContent: React.FC<React.PropsWithChildren> = ({ children }) => <>{children}</>;
+const SelectItem: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => <option value={value}>{children}</option>;
+// Icons (inline SVG)
+const Icon = {
+  Brain: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M7 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M4 10v4a4 4 0 0 0 4 4h1v-8H7a3 3 0 0 0-3 3Zm16 0v4a4 4 0 0 1-4 4h-1v-8h2a3 3 0 0 1 3 3Z"/></svg>),
+  Upload: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 15V5"/></svg>),
+  Play: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" {...props}><path d="M8 5v14l11-7z"/></svg>),
+  Loader: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${props.className||""}`}><circle cx="12" cy="12" r="10" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>),
+  Check: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M20 6L9 17l-5-5"/></svg>),
+  Link: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"/></svg>),
+  Beaker: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M6 2h12"/><path d="M14 2v6l5 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l5-9V2"/></svg>),
+};
+
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
-/**
- * API base resolution WITHOUT using process.env.
- * Priority:
- *  1) <meta name="api-base" content="https://api.example.com" />
- *  2) window.__API_BASE__ (set in a script tag before this bundle)
- *  3) If dev port :3000, use :8080
- *  4) DEFAULT to a separate domain (as requested): https://api.yourdomain.com
- */
+
 function resolveApiBase(): string {
   if (typeof window !== "undefined" && typeof document !== "undefined") {
     const meta = document.querySelector('meta[name="api-base"]') as HTMLMetaElement | null;
@@ -31,21 +63,18 @@ function resolveApiBase(): string {
     const { protocol, hostname, port } = window.location;
     if (port === "3000") return `${protocol}//${hostname}:8080`;
   }
-  // Explicit separate-domain default
+ 
   return "https://api.yourdomain.com";
 }
 
-// Tiny util
-const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-// Demo chart data
+// Demo chart data seed
 const demoSeries = Array.from({ length: 5 }, (_, i) => ({
   step: i + 1,
   loss: 1 / (i + 1) + Math.random() * 0.05,
   acc: Math.min(0.1 + i * 0.1, 0.99),
 }));
 
-// Helper to safely extract a prediction label from arbitrary API payloads
+// Safely extract a prediction label from arbitrary API payloads
 function extractPrediction(data: any): string {
   try {
     if (data && typeof data === "object" && "label" in data) return String((data as any).label);
@@ -75,14 +104,16 @@ export default function NeuralNetStudio() {
   const [wsPath, setWsPath] = useState<string>("/train/ws");
   const streamRef = useRef<EventSource | WebSocket | null>(null);
 
-  // --- Dev/Smoke tests state --- (existing tests retained; additional tests appended)
+  // Auto-reconnect state
+  const [autoReconnect, setAutoReconnect] = useState<boolean>(true);
+  const retryRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<number | null>(null);
+
+  // --- Smoke tests (kept) + added URL builders & parsing tests ---
   type T = { name: string; run: () => Promise<string> };
   const [testOutput, setTestOutput] = useState<string>("");
   const tests: T[] = useMemo(() => [
-    {
-      name: "Resolve API base",
-      run: async () => `Resolved apiBase = ${apiBase}`,
-    },
+    { name: "Resolve API base", run: async () => `Resolved apiBase = ${apiBase}` },
     {
       name: "GET /health",
       run: async () => {
@@ -94,7 +125,6 @@ export default function NeuralNetStudio() {
     {
       name: "POST /train (dry-call)",
       run: async () => {
-        // Some servers accept empty body, others require fields; we try a minimal set.
         const r = await fetch(`${apiBase}/train`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -104,35 +134,26 @@ export default function NeuralNetStudio() {
         return `status=${r.status} body=${txt.slice(0, 200)}`;
       },
     },
-    // New tests (do NOT alter existing):
-    {
-      name: "Build SSE URL",
-      run: async () => `${apiBase}${ssePath}`,
-    },
+    { name: "Build SSE URL", run: async () => `${apiBase}${ssePath}` },
     {
       name: "Build WebSocket URL",
-      run: async () => {
-        const wsUrl = apiBase.replace(/^http/i, (m) => (m.toLowerCase() === "https" ? "wss" : "ws")) + wsPath;
-        return wsUrl;
-      },
+      run: async () => apiBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:") + wsPath,
     },
     {
       name: "Parse sample predict payload (with label)",
-      run: async () => {
-        const sample = { label: 7, score: 0.98 };
-        return `extractPrediction => ${extractPrediction(sample)}`;
-      },
+      run: async () => `extractPrediction => ${extractPrediction({ label: 7, score: 0.98 })}`,
     },
     {
       name: "Parse sample predict payload (no label)",
-      run: async () => {
-        const sample = { value: 3, confidence: 0.77 };
-        return `extractPrediction => ${extractPrediction(sample)}`; // should stringify sample
-      },
+      run: async () => `extractPrediction => ${extractPrediction({ value: 3, confidence: 0.77 })}`,
+    },
+    {
+      name: "Preview backoff (1,2,4,8s)",
+      run: async () => [0,1,2,3].map(n => 1000 * 2**n).join(", "),
     },
   ], [apiBase, ssePath, wsPath]);
 
-  // Draw pad helpers
+  
   useEffect(() => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
@@ -170,11 +191,40 @@ export default function NeuralNetStudio() {
     return r.json();
   };
 
-  // --- Streaming helpers ---
+
+  const clearReconnectTimer = () => {
+    if (reconnectTimerRef.current != null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  };
+
+  const computeDelay = (attempt: number) => {
+    const base = 1000 * Math.pow(2, attempt); // 1s,2s,4s,...
+    const jitter = Math.floor(Math.random() * 250); // up to +250ms
+    return Math.min(base + jitter, 10000); // cap at 10s
+  };
+
+  const scheduleReconnect = (kind: "sse" | "ws") => {
+    if (!autoReconnect) return;
+    const attempt = retryRef.current;
+    const delay = computeDelay(attempt);
+    setStatus(`${kind.toUpperCase()} reconnect in ${Math.round(delay)}ms (attempt ${attempt + 1})`);
+    reconnectTimerRef.current = window.setTimeout(() => {
+      if (!autoReconnect) return;
+      if (kind === "sse") subscribeSSE(); else subscribeWS();
+    }, delay);
+    retryRef.current = Math.min(attempt + 1, 20);
+  };
+
+  
   const closeStream = () => {
+    clearReconnectTimer();
     if (streamRef.current instanceof EventSource) streamRef.current.close();
     if (streamRef.current instanceof WebSocket) streamRef.current.close();
     streamRef.current = null;
+    retryRef.current = 0;
+    setStatus("Stream stopped");
   };
 
   type MetricMsg = { step?: number; epoch?: number; loss?: number; acc?: number; accuracy?: number };
@@ -187,37 +237,44 @@ export default function NeuralNetStudio() {
   };
 
   const subscribeSSE = () => {
+    clearReconnectTimer();
     const url = `${apiBase}${ssePath}`;
     const es = new EventSource(url);
     streamRef.current = es;
     setStatus(`SSE connected: ${url}`);
+    retryRef.current = 0; // reset on success
     es.onmessage = (ev) => {
       try { const data: MetricMsg = JSON.parse(ev.data); applyMetric(data); }
       catch { /* ignore */ }
     };
-    es.onerror = () => { setStatus("SSE error; closing"); es.close(); streamRef.current = null; };
+    es.onerror = () => {
+      setStatus("SSE error; closing");
+      es.close();
+      streamRef.current = null;
+      scheduleReconnect("sse");
+    };
   };
 
   const subscribeWS = () => {
+    clearReconnectTimer();
     const wsUrl = apiBase.replace(/^http:/i, "ws:").replace(/^https:/i, "wss:") + wsPath;
     const ws = new WebSocket(wsUrl);
     streamRef.current = ws;
     setStatus(`WS connecting: ${wsUrl}`);
-    ws.onopen = () => setStatus(`WS connected: ${wsUrl}`);
+    ws.onopen = () => { setStatus(`WS connected: ${wsUrl}`); retryRef.current = 0; };
     ws.onmessage = (ev) => {
       try { const data: MetricMsg = JSON.parse(ev.data); applyMetric(data); }
       catch { /* ignore */ }
     };
     ws.onerror = () => setStatus("WS error");
-    ws.onclose = () => { setStatus("WS closed"); streamRef.current = null; };
+    ws.onclose = () => { setStatus("WS closed"); streamRef.current = null; scheduleReconnect("ws"); };
   };
 
   const startTraining = async () => {
     closeStream();
-    setSeries(demoSeries); // reset to a small seed so users see movement
+    setSeries(demoSeries); // reset seed so users see movement
     setBusy(true); setStatus("Starting training...");
     try {
-      // optional: upload dataset if provided
       if (file) {
         setStatus("Uploading dataset...");
         const fd = new FormData(); fd.append("file", file);
@@ -225,23 +282,16 @@ export default function NeuralNetStudio() {
         if (!up.ok) throw new Error(await up.text());
       }
 
-      // Kick off training on server
-      // Prefer /train/start if available; fall back to /train
-      let ok = true;
+      // Kick off training on server; prefer /train/start, fallback to /train
       try {
         await postJSON("/train/start", { model, batch, epochs, lr });
       } catch {
         const r = await fetch(`${apiBase}/train`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, batch, epochs, lr }) });
-        ok = r.ok;
-        if (!ok) throw new Error(await r.text());
+        if (!r.ok) throw new Error(await r.text());
       }
 
       // Connect streaming: try SSE first, then WS fallback
-      try {
-        subscribeSSE();
-      } catch {
-        subscribeWS();
-      }
+      try { subscribeSSE(); } catch { subscribeWS(); }
     } catch (err: any) {
       setStatus(`Error: ${err.message}`);
     } finally { setBusy(false); }
@@ -266,12 +316,8 @@ export default function NeuralNetStudio() {
     setTestOutput("");
     for (const t of tests) {
       setTestOutput((p) => p + `\n[RUN] ${t.name}`);
-      try {
-        const out = await t.run();
-        setTestOutput((p) => p + `\n[OK ] ${out}`);
-      } catch (e: any) {
-        setTestOutput((p) => p + `\n[ERR] ${e?.message || e}`);
-      }
+      try { const out = await t.run(); setTestOutput((p) => p + `\n[OK ] ${out}`); }
+      catch (e: any) { setTestOutput((p) => p + `\n[ERR] ${e?.message || e}`); }
     }
   };
 
@@ -281,13 +327,13 @@ export default function NeuralNetStudio() {
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
       <header className="max-w-6xl mx-auto px-4 py-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Brain className="w-6 h-6" /></div>
+          <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Icon.Brain className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Neural Net Studio</h1>
-            <p className="text-sm text-slate-400">Train, stream metrics, and test your Java NNFS models</p>
+            <p className="text-sm text-slate-400">Train, stream metrics, and test your Convulational Neural Networks models</p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-slate-800 border-slate-700 flex items-center gap-2"><LinkIcon className="w-3 h-3"/>API: {apiBase}</Badge>
+        <Badge variant="secondary" className="bg-slate-800 border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 pb-16">
@@ -301,7 +347,7 @@ export default function NeuralNetStudio() {
 
           <TabsContent value="train" className="mt-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="bg-slate-900/60 border-slate-800">
+              <Card>
                 <CardContent className="p-6 space-y-5">
                   <div>
                     <h2 className="text-lg font-semibold">Hyperparameters</h2>
@@ -311,7 +357,7 @@ export default function NeuralNetStudio() {
                     <div className="col-span-2">
                       <label className="text-sm text-slate-300">Model</label>
                       <Select value={model} onValueChange={setModel}>
-                        <SelectTrigger className="bg-slate-950 border-slate-800"><SelectValue placeholder="Select model" /></SelectTrigger>
+                        <SelectTrigger className="bg-slate-950 border-slate-800" />
                         <SelectContent>
                           <SelectItem value="mlp">Dense (MLP)</SelectItem>
                           <SelectItem value="cnn">CNN</SelectItem>
@@ -338,29 +384,33 @@ export default function NeuralNetStudio() {
                       <Input value={ssePath} onChange={(e)=>setSsePath(e.target.value)} className="bg-slate-950 border-slate-800" placeholder="/train/stream (SSE)" />
                       <Input value={wsPath} onChange={(e)=>setWsPath(e.target.value)} className="bg-slate-950 border-slate-800" placeholder="/train/ws (WebSocket)" />
                     </div>
-                    <div className="text-xs text-slate-500">UI tries <b>SSE</b> first at <code>{apiBase}{ssePath}</code>, then falls back to <b>WebSocket</b> at <code>{apiBase.replace(/^http:/i,'ws:').replace(/^https:/i,'wss:')}{wsPath}</code>.</div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <input id="auto-reconnect" type="checkbox" className="accent-white" checked={autoReconnect} onChange={(e)=>{ setAutoReconnect(e.target.checked); if(!e.target.checked) clearReconnectTimer(); }} />
+                      <label htmlFor="auto-reconnect" className="text-sm text-slate-300">Auto‑reconnect</label>
+                    </div>
+                    <div className="text-xs text-slate-500">UI tries <b>SSE</b> first at <code>{apiBase}{ssePath}</code>, then falls back to <b>WebSocket</b> at <code>{apiBase.replace(/^http:/i,'ws:').replace(/^https:/i,'wss:')}{wsPath}</code>. Auto‑reconnect uses exponential backoff with jitter (1s → 2s → 4s …, max 10s).</div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm text-slate-300">Optional dataset (.csv or .zip)</label>
                     <div className="flex items-center gap-3">
                       <Input type="file" accept=".csv,.zip" onChange={(e) => setFile(e.target.files?.[0])} className="bg-slate-950 border-slate-800" />
-                      <Button variant="secondary" className="gap-2" onClick={() => setFile(undefined)}><Check className="w-4 h-4" /> Clear</Button>
+                      <Button variant="secondary" className="gap-2" onClick={() => setFile(undefined)}><Icon.Check className="w-4 h-4" /> Clear</Button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">
-                    <Button onClick={startTraining} disabled={busy} className="gap-2"><Play className="w-4 h-4" />{busy ? "Working..." : "Start training (SSE/WS)"}</Button>
+                    <Button onClick={startTraining} disabled={busy} className="gap-2"><Icon.Play className="w-4 h-4" />{busy ? "Working..." : "Start training (SSE/WS)"}</Button>
                     <Button variant="secondary" onClick={closeStream}>Stop stream</Button>
-                    {busy && <Loader2 className="w-5 h-5 animate-spin" />}
+                    {busy && <Icon.Loader className="w-5 h-5" />}
                     <span className="text-slate-400 text-sm">{status}</span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-900/60 border-slate-800">
+              <Card>
                 <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-2"><Beaker className="w-5 h-5" /><h2 className="text-lg font-semibold">Training metrics (live)</h2></div>
+                  <div className="flex items-center gap-2"><Icon.Beaker className="w-5 h-5" /><h2 className="text-lg font-semibold">Training metrics (live)</h2></div>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={series} margin={{ top: 10, right: 20, bottom: 0, left: -20 }}>
@@ -381,7 +431,7 @@ export default function NeuralNetStudio() {
 
           <TabsContent value="inference" className="mt-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="bg-slate-900/60 border-slate-800">
+              <Card>
                 <CardContent className="p-6 space-y-4">
                   <h2 className="text-lg font-semibold">Draw a digit</h2>
                   <p className="text-slate-400 text-sm">
@@ -391,14 +441,14 @@ export default function NeuralNetStudio() {
                     <canvas ref={canvasRef} width={300} height={300} className="w-full rounded-xl border" />
                   </div>
                   <div className="flex gap-3">
-                    <Button onClick={predictCanvas} disabled={busy} className="gap-2"><Upload className="w-4 h-4" />Predict</Button>
+                    <Button onClick={predictCanvas} disabled={busy} className="gap-2"><Icon.Upload className="w-4 h-4" />Predict</Button>
                     <Button onClick={clearCanvas} variant="secondary">Clear</Button>
                   </div>
                   <div className="text-sm text-slate-400">Prediction: <span className="text-slate-100 font-semibold">{prediction}</span></div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-900/60 border-slate-800">
+              <Card>
                 <CardContent className="p-6 space-y-4">
                   <h2 className="text-lg font-semibold">Upload an image</h2>
                   <p className="text-slate-400 text-sm">PNG/JPG will be resized to 28×28 in your backend before inference.</p>
@@ -416,7 +466,7 @@ export default function NeuralNetStudio() {
           </TabsContent>
 
           <TabsContent value="logs" className="mt-6">
-            <Card className="bg-slate-900/60 border-slate-800">
+            <Card>
               <CardContent className="p-6 space-y-3">
                 <h2 className="text-lg font-semibold">System</h2>
                 <div className="grid md:grid-cols-3 gap-4">
@@ -435,13 +485,13 @@ export default function NeuralNetStudio() {
                 </div>
                 <div className="text-slate-400 text-sm">{status || "Idle"}</div>
                 <Progress value={busy ? 66 : (status === "Done" ? 100 : 0)} className="h-2" />
-                <Textarea placeholder="Console output (SSE/WS status & logs)" className="bg-slate-950 border-slate-800 min-h-40" />
+                <Textarea placeholder="Console output (SSE/WS status & logs)" className="min-h-40" />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="tests" className="mt-6">
-            <Card className="bg-slate-900/60 border-slate-800">
+            <Card>
               <CardContent className="p-6 space-y-4">
                 <h2 className="text-lg font-semibold">Smoke tests</h2>
                 <p className="text-slate-400 text-sm">These simple tests help verify endpoints and client parsing without changing your backend.</p>
@@ -453,16 +503,16 @@ export default function NeuralNetStudio() {
                       catch (e: any) { setTestOutput((p) => p + `\nERROR: ${e?.message || e}`); }
                     }}>{t.name}</Button>
                   ))}
-                  <Button onClick={runTests} className="gap-2"><Beaker className="w-4 h-4"/>Run all</Button>
+                  <Button onClick={runTests} className="gap-2"><span className="inline-flex items-center gap-1"><Icon.Beaker className="w-4 h-4"/>Run all</span></Button>
                 </div>
-                <Textarea value={testOutput} onChange={()=>{}} className="bg-slate-950 border-slate-800 min-h-48 font-mono text-xs" />
+                <Textarea value={testOutput} onChange={()=>{}} className="min-h-48 font-mono text-xs" />
                 <div className="text-xs text-slate-500">Tip: Set <code>window.__API_BASE__</code> or add <code>&lt;meta name="api-base" content="https://api.yourdomain.com" /&gt;</code> to override.</div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        <footer className="mt-10 text-center text-slate-500 text-xs">Frontend calls a separate API domain. Dev: Next.js :3000, Spring Boot :8080. Metrics stream via <b>SSE</b> (fallback <b>WebSocket</b>).</footer>
+        <footer className="mt-10 text-center text-slate-500 text-xs">Frontend calls a separate API domain. Dev: Next.js :3000, Spring Boot :8080. Metrics stream via <b>SSE</b> (fallback <b>WebSocket</b>) with auto‑reconnect.</footer>
       </main>
     </div>
   );
