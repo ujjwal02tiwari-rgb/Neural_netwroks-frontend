@@ -1,10 +1,10 @@
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }) {
   return (
-     <html lang="en">
+    <html lang="en">
       <head>
-         <meta name="api-base" content="https://api.yourdomain.com" />
-       </head>
-       <body className="min-h-screen bg-black text-white">{children}</body>
-     </html>
-   );
- }
+        <meta name="api-base" content="https://api.yourdomain.com" />
+      </head>
+      <body className="min-h-screen bg-black text-white">{children}</body>
+    </html>
+  );
+}
