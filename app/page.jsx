@@ -2,90 +2,89 @@
 
 import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
 
-const Card: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className = "", children }) => (
+const Card = ({ className = "", children }) => (
   <div className={`rounded-2xl border border-slate-800 bg-slate-900/60 ${className}`}>{children}</div>
 );
-const CardContent: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className = "", children }) => (
-  <div className={className}>{children}</div>
-);
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "secondary" } > = ({ className = "", variant, children, ...rest }) => (
+const CardContent = ({ className = "", children }) => <div className={className}>{children}</div>;
+const Button = ({ className = "", variant, children, ...rest }) => (
   <button className={`${variant === "secondary" ? "bg-slate-800 text-slate-100" : "bg-white text-slate-900"} rounded-xl px-3 py-2 border border-slate-700 hover:opacity-90 transition ${className}`} {...rest}>{children}</button>
 );
-const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = ({ className = "", ...rest }) => (
+const Input = ({ className = "", ...rest }) => (
   <input className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 ${className}`} {...rest} />
 );
-const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = ({ className = "", ...rest }) => (
+const Textarea = ({ className = "", ...rest }) => (
   <textarea className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} {...rest} />
 );
-const Slider: React.FC<{ value: number[]; min: number; max: number; step?: number; onValueChange: (v: number[]) => void; className?: string; }> = ({ value, min, max, step = 1, onValueChange, className = "" }) => (
+const Slider = ({ value, min, max, step = 1, onValueChange, className = "" }) => (
   <input type="range" min={min} max={max} step={step} value={value[0]} onChange={(e)=>onValueChange([Number(e.target.value)])} className={`w-full ${className}`} />
 );
-const Badge: React.FC<React.PropsWithChildren<{ className?: string; variant?: "secondary" }>> = ({ className = "", children }) => (
+const Badge = ({ className = "", children }) => (
   <span className={`inline-flex items-center text-xs px-2 py-1 rounded-lg ${className}`}>{children}</span>
 );
-const Progress: React.FC<{ value: number; className?: string }> = ({ value, className="" }) => (
+const Progress = ({ value, className="" }) => (
   <div className={`w-full h-2 bg-slate-800 rounded ${className}`}><div style={{ width: `${Math.max(0, Math.min(100, value))}%` }} className="h-full bg-white rounded"></div></div>
 );
 
 // Tabs
-const TabsCtx = createContext<{ value: string; set: (v: string)=>void }|null>(null);
-const Tabs: React.FC<React.PropsWithChildren<{ defaultValue: string; className?: string }>> = ({ defaultValue, className="", children }) => { const [v, setV] = useState(defaultValue); return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>; };
-const TabsList: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className="", children }) => <div className={`inline-grid gap-2 ${className}`}>{children}</div>;
-const TabsTrigger: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => { const ctx = useContext(TabsCtx)!; const active = ctx.value === value; return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"}>{children}</Button>; };
-const TabsContent: React.FC<React.PropsWithChildren<{ value: string; className?: string }>> = ({ value, className="", children }) => { const ctx = useContext(TabsCtx)!; return ctx.value === value ? <div className={className}>{children}</div> : null };
+const TabsCtx = createContext(null);
+const Tabs = ({ defaultValue, className="", children }) => {
+  const [v, setV] = useState(defaultValue);
+  return <div className={className}><TabsCtx.Provider value={{ value: v, set: setV }}>{children}</TabsCtx.Provider></div>;
+};
+const TabsList = ({ className="", children }) => <div className={`inline-grid gap-2 ${className}`}>{children}</div>;
+const TabsTrigger = ({ value, children }) => {
+  const ctx = useContext(TabsCtx); const active = ctx.value === value;
+  return <Button onClick={()=>ctx.set(value)} variant={active?undefined:"secondary"}>{children}</Button>;
+};
+const TabsContent = ({ value, className="", children }) => { const ctx = useContext(TabsCtx); return ctx.value === value ? <div className={className}>{children}</div> : null };
 
-// Select mapped to native select (supports <SelectTrigger/><SelectContent><SelectItem/></...>)
-const SelectCtx = createContext<{ value: string; onChange: (v: string)=>void; optionsRef: React.MutableRefObject<{value:string; label:React.ReactNode}[]> }|null>(null);
-const Select: React.FC<React.PropsWithChildren<{ value: string; onValueChange: (v:string)=>void }>> = ({ value, onValueChange, children }) => {
-  const optionsRef = useRef<{value:string; label:React.ReactNode}[]>([]);
-  // Clear options before each render so children can register again
+// Select mapped to native select
+const SelectCtx = createContext(null);
+const Select = ({ value, onValueChange, children }) => {
+  const optionsRef = useRef([]);
   optionsRef.current = [];
   return <SelectCtx.Provider value={{ value, onChange: onValueChange, optionsRef }}>{children}</SelectCtx.Provider>;
 };
-const SelectTrigger: React.FC<{ className?: string }> = ({ className="" }) => {
-  const ctx = useContext(SelectCtx)!;
+const SelectTrigger = ({ className="" }) => {
+  const ctx = useContext(SelectCtx);
   return (
     <select className={`rounded-xl px-3 py-2 border border-slate-800 bg-slate-950 w-full ${className}`} value={ctx.value} onChange={(e)=>ctx.onChange(e.target.value)}>
-      {ctx.optionsRef.current.map(opt => <option key={opt.value} value={opt.value}>{opt.label as any}</option>)}
+      {ctx.optionsRef.current.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
     </select>
   );
 };
-const SelectContent: React.FC<React.PropsWithChildren> = ({ children }) => (<>{children}</>);
-const SelectItem: React.FC<React.PropsWithChildren<{ value: string }>> = ({ value, children }) => {
-  const ctx = useContext(SelectCtx)!;
-  // Register option
-  useEffect(()=>{
-    ctx.optionsRef.current.push({ value, label: children });
-  }, [value, children]);
-  return null; // not rendered; options appear in SelectTrigger
+const SelectContent = ({ children }) => (<>{children}</>);
+const SelectItem = ({ value, children }) => {
+  const ctx = useContext(SelectCtx);
+  useEffect(()=>{ ctx.optionsRef.current.push({ value, label: children }); }, [value, children]);
+  return null;
 };
 
 // Inline icons (SVG)
 const Icon = {
-  Brain: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M7 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M4 10v4a4 4 0 0 0 4 4h1v-8H7a3 3 0 0 0-3 3Zm16 0v4a4 4 0 0 1-4 4h-1v-8h2a3 3 0 0 1 3 3Z"/></svg>),
-  Upload: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 15V5"/></svg>),
-  Play: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" {...props}><path d="M8 5v14l11-7z"/></svg>),
-  Loader: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${props.className||""}`}><circle cx="12" cy="12" r="10" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>),
-  Check: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M20 6L9 17l-5-5"/></svg>),
-  Link: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"/></svg>),
-  Beaker: (props:any)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M6 2h12"/><path d="M14 2v6l5 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l5-9V2"/></svg>),
+  Brain: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M7 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm10 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/><path d="M4 10v4a4 4 0 0 0 4 4h1v-8H7a3 3 0 0 0-3 3Zm16 0v4a4 4 0 0 1-4 4h-1v-8h2a3 3 0 0 1 3 3Z"/></svg>),
+  Upload: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 15V5"/></svg>),
+  Play: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" {...props}><path d="M8 5v14l11-7z"/></svg>),
+  Loader: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" className={`animate-spin ${props.className||""}`}><circle cx="12" cy="12" r="10" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>),
+  Check: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M20 6L9 17l-5-5"/></svg>),
+  Link: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L10 5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L14 19"/></svg>),
+  Beaker: (props)=>(<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M6 2h12"/><path d="M14 2v6l5 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l5-9V2"/></svg>),
 };
 
 // =====================
 // Inline SVG Chart (no deps)
 // =====================
-type SeriesPoint = { step: number; loss: number; acc: number };
-const SimpleChart: React.FC<{ data: SeriesPoint[] }> = ({ data }) => {
+const SimpleChart = ({ data }) => {
   const W = 800, H = 240, P = 30;
   if (!data || data.length === 0) return <div className="h-64" />;
   const xs = data.map(d => d.step);
   const ysLoss = data.map(d => d.loss);
   const xMin = Math.min(...xs), xMax = Math.max(...xs);
   const yMin = Math.min(...ysLoss), yMax = Math.max(...ysLoss);
-  const x = (v:number)=> P + ((v - xMin) / (xMax - xMin || 1)) * (W - 2*P);
-  const yLoss = (v:number)=> H - P - ((v - yMin) / (yMax - yMin || 1)) * (H - 2*P);
-  const yAcc = (v:number)=> H - P - (Math.max(0, Math.min(1, v)) * (H - 2*P));
-  const toPath = (pts:{x:number,y:number}[]) => pts.map((p,i)=>`${i?"L":"M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const x = (v)=> P + ((v - xMin) / (xMax - xMin || 1)) * (W - 2*P);
+  const yLoss = (v)=> H - P - ((v - yMin) / (yMax - yMin || 1)) * (H - 2*P);
+  const yAcc = (v)=> H - P - (Math.max(0, Math.min(1, v)) * (H - 2*P));
+  const toPath = (pts)=> pts.map((p,i)=>`${i?"L":"M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
   const lossPath = toPath(data.map(d=>({ x: x(d.step), y: yLoss(d.loss) })));
   const accPath  = toPath(data.map(d=>({ x: x(d.step), y: yAcc(d.acc ?? 0) })));
   return (
@@ -108,11 +107,11 @@ const SimpleChart: React.FC<{ data: SeriesPoint[] }> = ({ data }) => {
 // =====================
 // Helpers & Config
 // =====================
-function resolveApiBase(): string {
+function resolveApiBase() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {
-    const meta = document.querySelector('meta[name="api-base"]') as HTMLMetaElement | null;
-    if (meta?.content) return meta.content.trim();
-    const winAny: any = window as any;
+    const meta = document.querySelector('meta[name="api-base"]');
+    if (meta && meta.content) return meta.content.trim();
+    const winAny = window;
     if (winAny.__API_BASE__) return String(winAny.__API_BASE__);
     const { protocol, hostname, port } = window.location;
     if (port === "3000") return `${protocol}//${hostname}:8080`;
@@ -121,15 +120,15 @@ function resolveApiBase(): string {
   return "https://api.yourdomain.com";
 }
 
-const demoSeries: SeriesPoint[] = Array.from({ length: 5 }, (_, i) => ({
+const demoSeries = Array.from({ length: 5 }, (_, i) => ({
   step: i + 1,
   loss: 1 / (i + 1) + Math.random() * 0.05,
   acc: Math.min(0.1 + i * 0.1, 0.99),
 }));
 
-function extractPrediction(data: any): string {
+function extractPrediction(data) {
   try {
-    if (data && typeof data === "object" && "label" in data) return String((data as any).label);
+    if (data && typeof data === "object" && "label" in data) return String(data.label);
     if (typeof data === "string") return data;
     return JSON.stringify(data);
   } catch {
@@ -138,7 +137,7 @@ function extractPrediction(data: any): string {
 }
 
 // =====================
-// Main Component
+// Main Component (JS)
 // =====================
 export default function NeuralNetStudio() {
   const apiBase = useMemo(resolveApiBase, []);
@@ -147,27 +146,25 @@ export default function NeuralNetStudio() {
   const [batch, setBatch] = useState(32);
   const [epochs, setEpochs] = useState(5);
   const [lr, setLr] = useState(0.01);
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const [series, setSeries] = useState<SeriesPoint[]>(demoSeries);
-  const [file, setFile] = useState<File | undefined>();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [prediction, setPrediction] = useState<string>("—");
+  const [series, setSeries] = useState(demoSeries);
+  const canvasRef = useRef(null);
+  const [prediction, setPrediction] = useState("—");
 
   // Streaming config
-  const [ssePath, setSsePath] = useState<string>("/train/stream");
-  const [wsPath, setWsPath] = useState<string>("/train/ws");
-  const streamRef = useRef<EventSource | WebSocket | null>(null);
+  const [ssePath, setSsePath] = useState("/train/stream");
+  const [wsPath, setWsPath] = useState("/train/ws");
+  const streamRef = useRef(null);
 
   // Auto-reconnect state
-  const [autoReconnect, setAutoReconnect] = useState<boolean>(true);
-  const retryRef = useRef<number>(0);
-  const reconnectTimerRef = useRef<number | null>(null);
+  const [autoReconnect, setAutoReconnect] = useState(true);
+  const retryRef = useRef(0);
+  const reconnectTimerRef = useRef(null);
 
   // --- Smoke tests (existing + added) ---
-  type T = { name: string; run: () => Promise<string> };
-  const [testOutput, setTestOutput] = useState<string>("");
-  const tests: T[] = useMemo(() => [
+  const [testOutput, setTestOutput] = useState("");
+  const tests = useMemo(() => [
     { name: "Resolve API base", run: async () => `Resolved apiBase = ${apiBase}` },
     {
       name: "GET /health",
@@ -201,10 +198,10 @@ export default function NeuralNetStudio() {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext("2d"); if (!ctx) return;
     ctx.fillStyle = "white"; ctx.fillRect(0, 0, c.width, c.height);
-    let drawing = false; let last: { x: number; y: number } | null = null;
+    let drawing = false; let last = null;
     const scale = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    const start = (e: PointerEvent) => { drawing = true; last = { x: e.offsetX * scale, y: e.offsetY * scale }; };
-    const move = (e: PointerEvent) => {
+    const start = (e) => { drawing = true; last = { x: e.offsetX * scale, y: e.offsetY * scale }; };
+    const move = (e) => {
       if (!drawing || !last || !ctx) return;
       ctx.strokeStyle = "black"; ctx.lineWidth = 20; ctx.lineCap = "round"; ctx.beginPath();
       ctx.moveTo(last.x, last.y); ctx.lineTo(e.offsetX * scale, e.offsetY * scale); ctx.stroke();
@@ -228,7 +225,7 @@ export default function NeuralNetStudio() {
     ctx.fillStyle = "white"; ctx.fillRect(0, 0, c.width, c.height);
   };
 
-  const postJSON = async (path: string, body: any) => {
+  const postJSON = async (path, body) => {
     const r = await fetch(`${apiBase}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) throw new Error(await r.text());
     return r.json();
@@ -241,12 +238,12 @@ export default function NeuralNetStudio() {
       reconnectTimerRef.current = null;
     }
   };
-  const computeDelay = (attempt: number) => {
+  const computeDelay = (attempt) => {
     const base = 1000 * Math.pow(2, attempt); // 1s,2s,4s,...
     const jitter = Math.floor(Math.random() * 250); // up to +250ms
     return Math.min(base + jitter, 10000); // cap at 10s
   };
-  const scheduleReconnect = (kind: "sse" | "ws") => {
+  const scheduleReconnect = (kind) => {
     if (!autoReconnect) return;
     const attempt = retryRef.current;
     const delay = computeDelay(attempt);
@@ -261,15 +258,13 @@ export default function NeuralNetStudio() {
   // Streaming subscribe functions
   const closeStream = () => {
     clearReconnectTimer();
-    if (streamRef.current instanceof EventSource) streamRef.current.close();
-    if (streamRef.current instanceof WebSocket) streamRef.current.close();
+    if (streamRef.current && streamRef.current.close) streamRef.current.close();
     streamRef.current = null;
     retryRef.current = 0;
     setStatus("Stream stopped");
   };
 
-  type MetricMsg = { step?: number; epoch?: number; loss?: number; acc?: number; accuracy?: number };
-  const applyMetric = (m: MetricMsg) => {
+  const applyMetric = (m) => {
     const step = typeof m.step === "number" ? m.step : (m.epoch ?? series.length + 1);
     const loss = typeof m.loss === "number" ? m.loss : undefined;
     const acc = typeof m.acc === "number" ? m.acc : (typeof m.accuracy === "number" ? m.accuracy : undefined);
@@ -285,7 +280,7 @@ export default function NeuralNetStudio() {
     setStatus(`SSE connected: ${url}`);
     retryRef.current = 0; // reset on success
     es.onmessage = (ev) => {
-      try { const data: MetricMsg = JSON.parse(ev.data); applyMetric(data); }
+      try { const data = JSON.parse(ev.data); applyMetric(data); }
       catch { /* ignore */ }
     };
     es.onerror = () => {
@@ -304,7 +299,7 @@ export default function NeuralNetStudio() {
     setStatus(`WS connecting: ${wsUrl}`);
     ws.onopen = () => { setStatus(`WS connected: ${wsUrl}`); retryRef.current = 0; };
     ws.onmessage = (ev) => {
-      try { const data: MetricMsg = JSON.parse(ev.data); applyMetric(data); }
+      try { const data = JSON.parse(ev.data); applyMetric(data); }
       catch { /* ignore */ }
     };
     ws.onerror = () => setStatus("WS error");
@@ -316,25 +311,19 @@ export default function NeuralNetStudio() {
     setSeries(demoSeries); // reset seed so users see movement
     setBusy(true); setStatus("Starting training...");
     try {
-      if (file) {
-        setStatus("Uploading dataset...");
-        const fd = new FormData(); fd.append("file", file);
-        const up = await fetch(`${apiBase}/dataset/upload`, { method: "POST", body: fd });
-        if (!up.ok) throw new Error(await up.text());
-      }
       try { await postJSON("/train/start", { model, batch, epochs, lr }); }
       catch {
         const r = await fetch(`${apiBase}/train`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, batch, epochs, lr }) });
         if (!r.ok) throw new Error(await r.text());
       }
       try { subscribeSSE(); } catch { subscribeWS(); }
-    } catch (err: any) { setStatus(`Error: ${err.message}`); }
+    } catch (err) { setStatus(`Error: ${err.message}`); }
     finally { setBusy(false); }
   };
 
   const predictCanvas = async () => {
     if (!canvasRef.current) return;
-    const blob: Blob = await new Promise((res) => canvasRef.current!.toBlob((b) => res(b as Blob), "image/png"));
+    const blob = await new Promise((res) => canvasRef.current.toBlob((b) => res(b), "image/png"));
     const fd = new FormData(); fd.append("file", blob, "digit.png");
     setBusy(true); setStatus("Predicting...");
     try {
@@ -343,7 +332,7 @@ export default function NeuralNetStudio() {
       const data = await r.json();
       setPrediction(extractPrediction(data));
       setStatus("Prediction complete");
-    } catch (err: any) { setStatus(`Error: ${err.message}`); }
+    } catch (err) { setStatus(`Error: ${err.message}`); }
     finally { setBusy(false); }
   };
 
@@ -352,7 +341,7 @@ export default function NeuralNetStudio() {
     for (const t of tests) {
       setTestOutput((p) => p + `\n[RUN] ${t.name}`);
       try { const out = await t.run(); setTestOutput((p) => p + `\n[OK ] ${out}`); }
-      catch (e: any) { setTestOutput((p) => p + `\n[ERR] ${e?.message || e}`); }
+      catch (e) { setTestOutput((p) => p + `\n[ERR] ${e?.message || e}`); }
     }
   };
 
@@ -365,10 +354,10 @@ export default function NeuralNetStudio() {
           <div className="p-2 rounded-2xl bg-slate-800/80 backdrop-blur border border-slate-700"><Icon.Brain className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Neural Net Studio</h1>
-            <p className="text-sm text-slate-400">Train, stream metrics, and test your Neural Networks models</p>
+            <p className="text-sm text-slate-400">Train, stream metrics, and test your CNN models</p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-slate-800 border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
+        <Badge className="bg-slate-800 border border-slate-700 flex items-center gap-2"><Icon.Link className="w-3 h-3"/>API: {apiBase}</Badge>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 pb-16">
@@ -426,14 +415,6 @@ export default function NeuralNetStudio() {
                     <div className="text-xs text-slate-500">UI tries <b>SSE</b> first at <code>{apiBase}{ssePath}</code>, then falls back to <b>WebSocket</b> at <code>{apiBase.replace(/^http:/i,'ws:').replace(/^https:/i,'wss:')}{wsPath}</code>. Auto‑reconnect uses exponential backoff with jitter (1s → 2s → 4s …, max 10s).</div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm text-slate-300">Optional dataset (.csv or .zip)</label>
-                    <div className="flex items-center gap-3">
-                      <Input type="file" accept=".csv,.zip" onChange={(e) => setFile(e.target.files?.[0])} className="bg-slate-950 border-slate-800" />
-                      <Button variant="secondary" className="gap-2" onClick={() => setFile(undefined)}><Icon.Check className="w-4 h-4" /> Clear</Button>
-                    </div>
-                  </div>
-
                   <div className="flex items-center gap-3 flex-wrap">
                     <Button onClick={startTraining} disabled={busy} className="gap-2"><Icon.Play className="w-4 h-4" />{busy ? "Working..." : "Start training (SSE/WS)"}</Button>
                     <Button variant="secondary" onClick={closeStream}>Stop stream</Button>
@@ -480,7 +461,7 @@ export default function NeuralNetStudio() {
                       const f = e.target.files?.[0]; if (!f) return; const fd = new FormData(); fd.append("file", f);
                       setBusy(true); setStatus("Predicting...");
                       try { const r = await fetch(`${apiBase}/predict`, { method: "POST", body: fd }); if (!r.ok) throw new Error(await r.text()); const data = await r.json(); setPrediction(extractPrediction(data)); setStatus("Prediction complete"); }
-                      catch (err: any) { setStatus(`Error: ${err.message}`) } finally { setBusy(false); }
+                      catch (err) { setStatus(`Error: ${err.message}`) } finally { setBusy(false); }
                     }} />
                   </div>
                 </CardContent>
@@ -523,7 +504,7 @@ export default function NeuralNetStudio() {
                     <Button key={t.name} variant="secondary" onClick={async () => {
                       setTestOutput((p) => p + `\n\n=== ${t.name} ===`);
                       try { const out = await t.run(); setTestOutput((p) => p + `\n${out}`); }
-                      catch (e: any) { setTestOutput((p) => p + `\nERROR: ${e?.message || e}`); }
+                      catch (e) { setTestOutput((p) => p + `\nERROR: ${e?.message || e}`); }
                     }}>{t.name}</Button>
                   ))}
                   <Button onClick={runTests} className="gap-2"><span className="inline-flex items-center gap-1"><Icon.Beaker className="w-4 h-4"/>Run all</span></Button>
